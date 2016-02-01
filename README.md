@@ -1,2 +1,2 @@
 # distributedLock
-distributed lock by redis sentinel
+通过redis sentinel实现的租约锁
