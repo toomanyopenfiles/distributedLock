@@ -11,4 +11,4 @@ distributedLock是用java开发的租约锁客户端库，使用这个库，用�
 - tryLock过程不进行网络通讯，锁的获取和续租完全异步完成，用户调用不阻塞
 
 ## 使用示例
-sample：./blob/master/src/main/java/com/stephan/tof/distributedLock/RedisLeaseLockSample.java
+[RedisLeaseLockSample](./src/main/java/com/stephan/tof/distributedLock/RedisLeaseLockSample.java)
