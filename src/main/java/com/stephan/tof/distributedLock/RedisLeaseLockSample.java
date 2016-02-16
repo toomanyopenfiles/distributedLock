@@ -28,7 +28,8 @@ public class RedisLeaseLockSample {
 	 * 容器初始化时需要的代码，只执行一次
 	 */
 	private static void init() {
-		// 这里参考jedis的sentinel配置，指定masterName和sentinel nodes
+		// 指定masterName和sentinel nodes，注意masterName必须和sentinel中配置的master name一致
+		// redis sentinel文档请参考：http://redis.io/topics/sentinel#configuring-sentinel
 		String masterName = "xxx";
 		Set<String> sentinels = new HashSet<String>();
 		sentinels.add("127.0.0.1:8880");
@@ -36,7 +37,8 @@ public class RedisLeaseLockSample {
 		sentinels.add("127.0.0.1:8882");
 		JedisSentinelPool pool = new JedisSentinelPool(masterName, sentinels);
 		
-		// 根据业务需要，声明并注册多个锁
+		// 根据业务需要，声明并注册多把锁
+		// 在同一时间，可以保证每把锁有且仅有一个业务节点能够获取到
 		lock = new RedisLeaseLock(pool);
 		lock.registerLock(LOCK1, getNodeId());
 		lock.registerLock(LOCK2, getNodeId());
