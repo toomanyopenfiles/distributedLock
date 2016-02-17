@@ -5,6 +5,8 @@ package com.stephan.tof.distributedLock;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
@@ -59,13 +61,13 @@ public class RedisLeaseLock implements LeaseLock {
 	}
 	
 	@Override
-	public synchronized void registerLock(String key, String value) {
+	public synchronized void registerLock(String key, String value, LeaseLockListener listener) {
 		if (lockMap.containsKey(key)) {
 			logger.error("register lease lock error, key is exist! key=" + key);
 			return;
 		}
 		
-		lockMap.put(key, new LockMessage(key, value));
+		lockMap.put(key, new LockMessage(key, value, listener));
 		logger.info("register lease lock, key=" + key + ", value=" + value);
 
 		// 注册时需要阻塞调用一次
@@ -172,8 +174,10 @@ public class RedisLeaseLock implements LeaseLock {
 	public boolean tryLock(String key) {
 		LockMessage lockMessage = checkLockExist(key);
 		if (System.currentTimeMillis() < lockMessage.getExpireTime()) {
+			lockMessage.setNewStatus(true);
 			return true;
 		} else{
+			lockMessage.setNewStatus(false);
 			return false;
 		}
 	}
@@ -205,7 +209,7 @@ public class RedisLeaseLock implements LeaseLock {
 		return lockMessage;
 	}
 	
-	private class LockMessage {
+	class LockMessage {
 		
 		private final String key;
 		
@@ -213,9 +217,16 @@ public class RedisLeaseLock implements LeaseLock {
 		
 		private final AtomicLong expireTime = new AtomicLong(0L);
 		
-		private LockMessage(String key, String value) {
+		private final LeaseLockListener listener;
+		
+		private final AtomicBoolean lockStatus = new AtomicBoolean(false);
+		
+		private final AtomicInteger changeTimes = new AtomicInteger(0);
+		
+		private LockMessage(String key, String value, LeaseLockListener listener) {
 			this.key = key;
 			this.value = value;
+			this.listener = listener;
 		}
 
 		public String getKey() {
@@ -224,6 +235,15 @@ public class RedisLeaseLock implements LeaseLock {
 
 		public String getValue() {
 			return value;
+		}
+		
+		private boolean setNewStatus(boolean newStatus) {
+			boolean success = lockStatus.compareAndSet(!newStatus, newStatus);
+			if (success && listener != null) {
+				listener.lockChanged(this, newStatus, changeTimes.incrementAndGet());
+			}
+			
+			return success;
 		}
 
 		/**
@@ -235,7 +255,7 @@ public class RedisLeaseLock implements LeaseLock {
 			return expireTime.get();
 		}
 
-		public void setExpireTime(long expireTime) {
+		private void setExpireTime(long expireTime) {
 			this.expireTime.set(expireTime);
 		}
 		

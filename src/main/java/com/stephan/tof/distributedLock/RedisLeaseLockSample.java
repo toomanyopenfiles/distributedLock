@@ -5,6 +5,8 @@ import java.util.Set;
 
 import redis.clients.jedis.JedisSentinelPool;
 
+import com.stephan.tof.distributedLock.RedisLeaseLock.LockMessage;
+
 /**
  * 
  * @author Stephan Gao
@@ -40,8 +42,15 @@ public class RedisLeaseLockSample {
 		// 根据业务需要，声明并注册多把锁
 		// 在同一时间，可以保证每把锁有且仅有一个业务节点能够获取到
 		lock = new RedisLeaseLock(pool);
-		lock.registerLock(LOCK1, getNodeId());
-		lock.registerLock(LOCK2, getNodeId());
+		lock.registerLock(LOCK1, getNodeId(), null);
+		lock.registerLock(LOCK2, getNodeId(), 
+				new LeaseLockListener() {	// 可以给不同的锁指定不同的listener，当锁状态变更时会回调此listener
+			@Override
+			public void lockChanged(LockMessage lock, boolean newStatus, int changeTimes) {
+				System.out.println("lock key=" + lock.getKey() + ", lock value=" + lock.getValue() + 
+						", lock new status=" + newStatus + ", changeTimes=" + changeTimes);
+			}
+		});
 	}
 	
 	/**

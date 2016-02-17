@@ -21,7 +21,7 @@ public interface LeaseLock {
 	 * @param value 锁的value，可以设置为本机IP或者IP+pid等可以唯一标识一个锁持有方的信息
 	 * 
 	 */
-	public void registerLock(String key, String value);
+	public void registerLock(String key, String value, LeaseLockListener listener);
 	
 	/**
 	 * 尝试获取锁
